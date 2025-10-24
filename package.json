@@ -1,0 +1,30 @@
+{
+  "name": "declaracioniva",
+  "version": "1.0.0",
+  "description": "Control de IVA - Declaración OVI",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Teffpv/Proyecto-Declaraci-n-IVA.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Teffpv/Proyecto-Declaraci-n-IVA/issues"
+  },
+  "homepage": "https://github.com/Teffpv/Proyecto-Declaraci-n-IVA#readme",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.0.8"
+  }
+}
