@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control IVA OVI - Costa Rica</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #1a3d5c; margin-bottom: 10px; }
+        .subtitle { color: #666; margin-bottom: 20px; font-size: 14px; }
+        .form-section { background: #f9f9f9; padding: 20px; margin-bottom: 20px; border-radius: 6px; border-left: 4px solid #2c5aa0; }
+        .form-section h2 { color: #2c5aa0; font-size: 16px; margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; color: #333; margin-bottom: 5px; font-size: 13px; }
+        input[type="text"], input[type="number"], input[type="date"], select, input[type="file"] { 
+            width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;
+        }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        button { background: #2c5aa0; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
+        button:hover { background: #1a3d5c; }
+        button.danger { background: #d9534f; }
+        button.danger:hover { background: #c9302c; }
+        button.secondary { background: #6c757d; }
+        button.secondary:hover { background: #5a6268; }
+        .table-container { overflow-x: auto; margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #2c5aa0; color: white; padding: 10px; text-align: left; }
+        td { padding: 8px; border-bottom: 1px solid #ddd; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        .currency { text-align: right; font-family: 'Courier New'; }
+        .summary-box { background: #e8f4f8; border: 2px solid #2c5aa0; padding: 15px; margin: 20px 0; border-radius: 6px; }
+        .summary-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
+        .summary-row strong { color: #1a3d5c; }
+        .total-row { font-size: 16px; font-weight: bold; border-top: 2px solid #2c5aa0; padding-top: 10px; margin-top: 10px; }
+        .positive { color: #28a745; }
+        .negative { color: #d9534f; }
+        .action-buttons { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+        .info-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin-bottom: 15px; border-radius: 4px; font-size: 13px; }
+        .info-box strong { color: #856404; }
+        .success-box { background: #d4edda; border-left: 4px solid #28a745; padding: 12px; margin-bottom: 15px; border-radius: 4px; font-size: 13px; }
+        .success-box strong { color: #155724; }
+        .import-section { background: #e7f3ff; border: 2px dashed #2c5aa0; padding: 20px; margin-bottom: 20px; border-radius: 6px; text-align: center; }
+        .import-buttons { display: flex; gap: 10px; margin-top: 15px; justify-content: center; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Control de IVA - Declaración OVI</h1>
+        <p class="subtitle">Régimen Tradicional - Costa Rica 🇨🇷 | Período: <span id="periodo"></span></p>
+        
+        <div id="successMessage"></div>
+        
+        <div class="info-box">
+            <strong>💡 Nota:</strong> Este archivo te ayuda a organizar tus compras y ventas antes de presentar en OVI. Verifica que los montos coincidan con tu sistema de facturación.
+        </div>
+
+        <!-- SECCIÓN INFORMACIÓN GENERAL -->
+        <div class="form-section">
+            <h2>Información de la Declaración</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Mes de la Declaración</label>
+                    <input type="month" id="mesDeclaracion" value="">
+                </div>
+                <div class="form-group">
+                    <label>Nombre del Cliente</label>
+                    <input type="text" id="nombreCliente" placeholder="Ej: Mi Negocio S.A.">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Cédula Jurídica</label>
+                    <input type="text" id="cedulaJuridica" placeholder="Ej: 3-101-123456">
+                </div>
+                <div class="form-group">
+                    <label>Actividad Económica</label>
+                    <input type="text" id="actividad" placeholder="Ej: Venta de Productos">
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN IMPORTAR DATOS -->
+        <div class="import-section">
+            <h2 style="color: #2c5aa0; margin-bottom: 10px;">📥 IMPORTAR DATOS DE ARCHIVOS EXCEL</h2>
+            <p style="margin-bottom: 15px; color: #555;">Carga tus archivos de ventas y compras para procesarlos automáticamente</p>
+            <div class="import-buttons">
+                <div style="flex: 1; min-width: 200px;">
+                    <label for="fileVentas" style="font-weight: bold; color: #2c5aa0; margin-bottom: 8px; display: block;">Archivo de Ventas</label>
+                    <input type="file" id="fileVentas" accept=".xlsx,.xls" style="margin-bottom: 10px;">
+                    <button onclick="importarVentas()" class="secondary">Importar Ventas</button>
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <label for="fileCompras" style="font-weight: bold; color: #2c5aa0; margin-bottom: 8px; display: block;">Archivo de Compras</label>
+                    <input type="file" id="fileCompras" accept=".xlsx,.xls" style="margin-bottom: 10px;">
+                    <button onclick="importarCompras()" class="secondary">Importar Compras</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN COMPRAS -->
+        <div class="form-section">
+            <h2>📥 Registro de COMPRAS (IVA Deducible)</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Número de Factura</label>
+                    <input type="text" id="numFacturaCompra" placeholder="Ej: 001-001-000123">
+                </div>
+                <div class="form-group">
+                    <label>Fecha de Compra</label>
+                    <input type="date" id="fechaCompra">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Proveedor</label>
+                    <input type="text" id="proveedor" placeholder="Nombre del proveedor">
+                </div>
+                <div class="form-group">
+                    <label>Monto Total (sin IVA)</label>
+                    <input type="number" id="montoCompra" placeholder="0.00" step="0.01">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Tasa IVA (%)</label>
+                    <select id="tasaIvaCompra">
+                        <option value="13">13%</option>
+                        <option value="1">1%</option>
+                        <option value="0">Exento</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de Compra</label>
+                    <select id="tipoCompra">
+                        <option value="local">Compra Local</option>
+                        <option value="importacion">Importación</option>
+                        <option value="servicio">Servicio</option>
+                    </select>
+                </div>
+            </div>
+            <button onclick="agregarCompra()">➕ Agregar Compra Manual</button>
+        </div>
+
+        <!-- TABLA COMPRAS -->
+        <div class="table-container">
+            <h3 style="margin-bottom: 10px;">Detalle de Compras (<span id="countCompras">0</span> registros)</h3>
+            <table id="tablaCompras">
+                <thead>
+                    <tr>
+                        <th>Factura</th>
+                        <th>Fecha</th>
+                        <th>Proveedor</th>
+                        <th>Monto Compra</th>
+                        <th>Tasa IVA</th>
+                        <th>IVA Deducible</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="comprasBody"></tbody>
+                <tfoot>
+                    <tr style="background: #e8f4f8; font-weight: bold;">
+                        <td colspan="3">TOTALES COMPRAS</td>
+                        <td class="currency" id="totalMontoCompras">₡ 0.00</td>
+                        <td></td>
+                        <td class="currency" id="totalIvaDeducible" style="background: #fff3cd;">₡ 0.00</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- SECCIÓN VENTAS -->
+        <div class="form-section">
+            <h2>📤 Registro de VENTAS (IVA Cobrado)</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Número de Factura</label>
+                    <input type="text" id="numFacturaVenta" placeholder="Ej: 001-001-000456">
+                </div>
+                <div class="form-group">
+                    <label>Fecha de Venta</label>
+                    <input type="date" id="fechaVenta">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Cliente</label>
+                    <input type="text" id="cliente" placeholder="Nombre del cliente">
+                </div>
+                <div class="form-group">
+                    <label>Monto Total (sin IVA)</label>
+                    <input type="number" id="montoVenta" placeholder="0.00" step="0.01">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Tasa IVA (%)</label>
+                    <select id="tasaIvaVenta">
+                        <option value="13">13%</option>
+                        <option value="1">1%</option>
+                        <option value="0">Exento</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de Venta</label>
+                    <select id="tipoVenta">
+                        <option value="local">Venta Local</option>
+                        <option value="exportacion">Exportación</option>
+                        <option value="exenta">Venta Exenta</option>
+                    </select>
+                </div>
+            </div>
+            <button onclick="agregarVenta()">➕ Agregar Venta Manual</button>
+        </div>
+
+        <!-- TABLA VENTAS -->
+        <div class="table-container">
+            <h3 style="margin-bottom: 10px;">Detalle de Ventas (<span id="countVentas">0</span> registros)</h3>
+            <table id="tablaVentas">
+                <thead>
+                    <tr>
+                        <th>Factura</th>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th>Monto Venta</th>
+                        <th>Tasa IVA</th>
+                        <th>IVA Cobrado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="ventasBody"></tbody>
+                <tfoot>
+                    <tr style="background: #e8f4f8; font-weight: bold;">
+                        <td colspan="3">TOTALES VENTAS</td>
+                        <td class="currency" id="totalMontoVentas">₡ 0.00</td>
+                        <td></td>
+                        <td class="currency" id="totalIvaCobrado" style="background: #fff3cd;">₡ 0.00</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- RESUMEN Y CÁLCULO -->
+        <div class="summary-box">
+            <h3 style="color: #1a3d5c; margin-bottom: 15px;">📊 RESUMEN DE IVA</h3>
+            <div class="summary-row">
+                <span>IVA Cobrado en Ventas:</span>
+                <strong class="currency">₡ <span id="resumenIvaCobrado">0.00</span></strong>
+            </div>
+            <div class="summary-row">
+                <span>IVA Deducible en Compras:</span>
+                <strong class="currency negative">₡ <span id="resumenIvaDeducible">0.00</span></strong>
+            </div>
+            <div class="summary-row total-row">
+                <span id="labelIvaAPagar">IVA A PAGAR:</span>
+                <strong class="currency" id="ivaAPagar" style="font-size: 18px;">₡ 0.00</strong>
+            </div>
+        </div>
+
+        <!-- BOTONES DE ACCIÓN -->
+        <div class="action-buttons">
+            <button onclick="descargarExcelOVI()">📥 Descargar Excel (Formato OVI)</button>
+            <button onclick="imprimirDeclaracion()">🖨️ Imprimir</button>
+            <button class="danger" onclick="limpiarTodo()">🗑️ Limpiar Todo</button>
+        </div>
+    </div>
+
+    <script>
+        let compras = [];
+        let ventas = [];
+
+        // Inicializar mes actual
+        document.addEventListener('DOMContentLoaded', function() {
+            const hoy = new Date();
+            document.getElementById('mesDeclaracion').value = hoy.toISOString().split('T')[0].substring(0, 7);
+            document.getElementById('fechaCompra').valueAsDate = hoy;
+            document.getElementById('fechaVenta').valueAsDate = hoy;
+            actualizarPeriodo();
+        });
+
+        function actualizarPeriodo() {
+            const mes = document.getElementById('mesDeclaracion').value;
+            if (mes) {
+                const [año, m] = mes.split('-');
+                const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+                document.getElementById('periodo').textContent = `${meses[parseInt(m) - 1]} ${año}`;
+            }
+        }
+
+        function mostrarMensajeExito(mensaje) {
+            const div = document.getElementById('successMessage');
+            div.innerHTML = `<div class="success-box"><strong>✅ ${mensaje}</strong></div>`;
+            setTimeout(() => {
+                div.innerHTML = '';
+            }, 3000);
+        }
+
+        async function importarVentas() {
+            const file = document.getElementById('fileVentas').files[0];
+            if (!file) {
+                alert('Por favor selecciona un archivo de ventas');
+                return;
+            }
+
+            try {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const wb = XLSX.read(data, { cellDates: true, defval: '' });
+                        const ws = wb.Sheets[wb.SheetNames[0]];
+                        
+                        // Leer todas las celdas para acceder por índice
+                        const range = XLSX.utils.decode_range(ws['!ref']);
+                        const jsonData = XLSX.utils.sheet_to_json(ws, { defval: '', header: 1 });
+
+                        let contadoAgregado = 0;
+                        
+                        // Procesar desde la fila 2 en adelante (fila 1 es encabezado)
+                        for (let i = 1; i < jsonData.length; i++) {
+                            const row = jsonData[i];
+                            if (!row || row.length === 0) continue;
+
+                            // Estructura del archivo: [Fecha, No.Doc, ConsecutivoElectrónico, TipoDoc, Cliente, NoId, Divisa, CodProducto, Producto, Cantidad, Precio, SubTotal, Descuento, TipoCambio, BaseImponible, Impuesto, PorcentajeExoneración, MontoIVA, ...]
+                            const fecha = row[0];
+                            const numeroDoc = row[1];
+                            const cliente = row[4];
+                            const montoVenta = parseFloat(row[14]) || 0;  // Base Imponible
+                            const ivaVenta = parseFloat(row[17]) || 0;    // Monto IVA
+                            
+                            // Determinar tasa IVA basada en el impuesto
+                            let tasaIva = 0;
+                            if (ivaVenta > 0 && montoVenta > 0) {
+                                tasaIva = Math.round((ivaVenta / montoVenta) * 100);
+                            }
+
+                            if (fecha && numeroDoc && cliente && montoVenta > 0) {
+                                let fechaFormato = fecha;
+                                if (typeof fecha === 'number') {
+                                    // Es fecha en Excel (número serial)
+                                    fechaFormato = XLSX.SSF.format('yyyy-mm-dd', fecha);
+                                } else if (fecha instanceof Date) {
+                                    fechaFormato = fecha.toISOString().split('T')[0];
+                                }
+
+                                ventas.push({
+                                    numFactura: numeroDoc.toString(),
+                                    fecha: fechaFormato,
+                                    cliente: cliente.toString(),
+                                    monto: montoVenta,
+                                    tasa: tasaIva,
+                                    iva: ivaVenta,
+                                    tipo: 'importado'
+                                });
+                                contadoAgregado++;
+                            }
+                        }
+
+                        if (contadoAgregado > 0) {
+                            actualizarTablas();
+                            mostrarMensajeExito(`✅ Se importaron ${contadoAgregado} ventas correctamente`);
+                        } else {
+                            alert('No se encontraron ventas válidas en el archivo');
+                        }
+                    } catch (error) {
+                        alert('Error procesando archivo: ' + error.message);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } catch (error) {
+                alert('Error al cargar archivo: ' + error.message);
+            }
+        }
+
+        async function importarCompras() {
+            const file = document.getElementById('fileCompras').files[0];
+            if (!file) {
+                alert('Por favor selecciona un archivo de compras');
+                return;
+            }
+
+            try {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const wb = XLSX.read(data, { cellDates: true, defval: '' });
+                        const ws = wb.Sheets[wb.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+                        let contadoAgregado = 0;
+                        jsonData.forEach((row) => {
+                            if (!row['Fecha'] || !row['No. Documento']) return;
+
+                            const fecha = row['Fecha'];
+                            const numeroDoc = row['No. Documento'];
+                            const proveedor = row['Proveedor'] || '';
+                            const subtotal = parseFloat(row['SubTotal']) || 0;
+                            const impuestos = parseFloat(row['Impuestos']) || 0;
+
+                            if (numeroDoc && proveedor && subtotal > 0) {
+                                let fechaFormato = fecha;
+                                if (typeof fecha === 'number') {
+                                    fechaFormato = XLSX.SSF.format('yyyy-mm-dd', fecha);
+                                } else if (fecha instanceof Date) {
+                                    fechaFormato = fecha.toISOString().split('T')[0];
+                                }
+
+                                const tasaIva = impuestos > 0 ? 13 : 0;
+                                compras.push({
+                                    numFactura: numeroDoc.toString(),
+                                    fecha: fechaFormato,
+                                    proveedor: proveedor,
+                                    monto: subtotal,
+                                    tasa: tasaIva,
+                                    iva: impuestos,
+                                    tipo: 'importado'
+                                });
+                                contadoAgregado++;
+                            }
+                        });
+
+                        if (contadoAgregado > 0) {
+                            actualizarTablas();
+                            mostrarMensajeExito(`✅ Se importaron ${contadoAgregado} compras correctamente`);
+                        } else {
+                            alert('No se encontraron compras válidas en el archivo');
+                        }
+                    } catch (error) {
+                        alert('Error procesando archivo: ' + error.message);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } catch (error) {
+                alert('Error al cargar archivo: ' + error.message);
+            }
+        }
+
+        function agregarCompra() {
+            const numFactura = document.getElementById('numFacturaCompra').value;
+            const fecha = document.getElementById('fechaCompra').value;
+            const proveedor = document.getElementById('proveedor').value;
+            const monto = parseFloat(document.getElementById('montoCompra').value) || 0;
+            const tasa = parseFloat(document.getElementById('tasaIvaCompra').value);
+            const tipo = document.getElementById('tipoCompra').value;
+
+            if (!numFactura || !fecha || !proveedor || monto === 0) {
+                alert('Por favor completa todos los campos');
+                return;
+            }
+
+            const iva = (monto * tasa) / 100;
+            compras.push({ numFactura, fecha, proveedor, monto, tasa, iva, tipo });
+            
+            limpiarFormularioCompra();
+            actualizarTablas();
+        }
+
+        function agregarVenta() {
+            const numFactura = document.getElementById('numFacturaVenta').value;
+            const fecha = document.getElementById('fechaVenta').value;
+            const cliente = document.getElementById('cliente').value;
+            const monto = parseFloat(document.getElementById('montoVenta').value) || 0;
+            const tasa = parseFloat(document.getElementById('tasaIvaVenta').value);
+            const tipo = document.getElementById('tipoVenta').value;
+
+            if (!numFactura || !fecha || !cliente || monto === 0) {
+                alert('Por favor completa todos los campos');
+                return;
+            }
+
+            const iva = (monto * tasa) / 100;
+            ventas.push({ numFactura, fecha, cliente, monto, tasa, iva, tipo });
+            
+            limpiarFormularioVenta();
+            actualizarTablas();
+        }
+
+        function eliminarCompra(index) {
+            compras.splice(index, 1);
+            actualizarTablas();
+        }
+
+        function eliminarVenta(index) {
+            ventas.splice(index, 1);
+            actualizarTablas();
+        }
+
+        function actualizarTablas() {
+            // Actualizar tabla compras
+            let htmlCompras = '';
+            let totalMontoCompras = 0;
+            let totalIvaDeducible = 0;
+
+            compras.forEach((c, i) => {
+                htmlCompras += `<tr>
+                    <td>${c.numFactura}</td>
+                    <td>${c.fecha}</td>
+                    <td>${c.proveedor}</td>
+                    <td class="currency">₡ ${c.monto.toFixed(2)}</td>
+                    <td>${c.tasa}%</td>
+                    <td class="currency">₡ ${c.iva.toFixed(2)}</td>
+                    <td><button class="danger" onclick="eliminarCompra(${i})" style="padding: 5px 10px; font-size: 11px;">Eliminar</button></td>
+                </tr>`;
+                totalMontoCompras += c.monto;
+                totalIvaDeducible += c.iva;
+            });
+
+            document.getElementById('comprasBody').innerHTML = htmlCompras;
+            document.getElementById('totalMontoCompras').textContent = '₡ ' + totalMontoCompras.toFixed(2);
+            document.getElementById('totalIvaDeducible').textContent = '₡ ' + totalIvaDeducible.toFixed(2);
+            document.getElementById('countCompras').textContent = compras.length;
+
+            // Actualizar tabla ventas
+            let htmlVentas = '';
+            let totalMontoVentas = 0;
+            let totalIvaCobrado = 0;
+
+            ventas.forEach((v, i) => {
+                htmlVentas += `<tr>
+                    <td>${v.numFactura}</td>
+                    <td>${v.fecha}</td>
+                    <td>${v.cliente}</td>
+                    <td class="currency">₡ ${v.monto.toFixed(2)}</td>
+                    <td>${v.tasa}%</td>
+                    <td class="currency">₡ ${v.iva.toFixed(2)}</td>
+                    <td><button class="danger" onclick="eliminarVenta(${i})" style="padding: 5px 10px; font-size: 11px;">Eliminar</button></td>
+                </tr>`;
+                totalMontoVentas += v.monto;
+                totalIvaCobrado += v.iva;
+            });
+
+            document.getElementById('ventasBody').innerHTML = htmlVentas;
+            document.getElementById('totalMontoVentas').textContent = '₡ ' + totalMontoVentas.toFixed(2);
+            document.getElementById('totalIvaCobrado').textContent = '₡ ' + totalIvaCobrado.toFixed(2);
+            document.getElementById('countVentas').textContent = ventas.length;
+
+            // Actualizar resumen
+            const ivaAPagar = totalIvaCobrado - totalIvaDeducible;
+            document.getElementById('resumenIvaCobrado').textContent = totalIvaCobrado.toFixed(2);
+            document.getElementById('resumenIvaDeducible').textContent = totalIvaDeducible.toFixed(2);
+            
+            const labelIva = document.getElementById('labelIvaAPagar');
+            const spanIva = document.getElementById('ivaAPagar');
+            
+            if (ivaAPagar > 0) {
+                labelIva.textContent = 'IVA A PAGAR:';
+                spanIva.className = 'currency positive';
+                spanIva.textContent = '₡ ' + ivaAPagar.toFixed(2);
+            } else if (ivaAPagar < 0) {
+                labelIva.textContent = 'IVA A ACREDITAR:';
+                spanIva.className = 'currency negative';
+                spanIva.textContent = '₡ ' + Math.abs(ivaAPagar).toFixed(2);
+            } else {
+                spanIva.className = 'currency';
+                spanIva.textContent = '₡ 0.00';
+            }
+        }
+
+        function limpiarFormularioCompra() {
+            document.getElementById('numFacturaCompra').value = '';
+            document.getElementById('proveedor').value = '';
+            document.getElementById('montoCompra').value = '';
+        }
+
+        function limpiarFormularioVenta() {
+            document.getElementById('numFacturaVenta').value = '';
+            document.getElementById('cliente').value = '';
+            document.getElementById('montoVenta').value = '';
+        }
+
+        function limpiarTodo() {
+            if (confirm('¿Estás seguro de que deseas eliminar todos los registros?')) {
+                compras = [];
+                ventas = [];
+                document.getElementById('nombreCliente').value = '';
+                document.getElementById('cedulaJuridica').value = '';
+                document.getElementById('actividad').value = '';
+                document.getElementById('fileVentas').value = '';
+                document.getElementById('fileCompras').value = '';
+                actualizarTablas();
+            }
+        }
+
+        function descargarExcelOVI() {
+            const wb = XLSX.utils.book_new();
+
+            // Hoja de resumen
+            const wsResumen = XLSX.utils.aoa_to_sheet([
+                ['DECLARACIÓN DE IVA - RÉGIMEN TRADICIONAL'],
+                [''],
+                ['Información del Declarante'],
+                ['Cliente:', document.getElementById('nombreCliente').value],
+                ['Cédula Jurídica:', document.getElementById('cedulaJuridica').value],
+                ['Actividad:', document.getElementById('actividad').value],
+                ['Período:', document.getElementById('periodo').textContent],
+                [''],
+                ['RESUMEN DE IVA PARA OVI'],
+                ['Concepto', 'Monto'],
+                ['IVA Cobrado en Ventas', document.getElementById('totalIvaCobrado').textContent.replace('₡ ', '')],
+                ['IVA Deducible en Compras', document.getElementById('totalIvaDeducible').textContent.replace('₡ ', '')],
+                ['IVA A Pagar / Acreditar', document.getElementById('ivaAPagar').textContent.replace('₡ ', '')]
+            ]);
+            XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
+
+            // Hoja de compras (formato OVI)
+            const comprasData = [
+                ['COMPRAS - FORMATO OVI'],
+                ['Número de Factura', 'Fecha', 'Proveedor', 'Subtotal (Base Imponible)', 'Tasa IVA %', 'IVA Deducible', 'Total con IVA']
+            ];
+            let totalComprasConIva = 0;
+            compras.forEach(c => {
+                const totalConIva = c.monto + c.iva;
+                totalComprasConIva += totalConIva;
+                comprasData.push([c.numFactura, c.fecha, c.proveedor, c.monto.toFixed(2), c.tasa, c.iva.toFixed(2), totalConIva.toFixed(2)]);
+            });
+            comprasData.push(['TOTAL', '', '', compras.reduce((s, c) => s + c.monto, 0).toFixed(2), '', compras.reduce((s, c) => s + c.iva, 0).toFixed(2), totalComprasConIva.toFixed(2)]);
+            const wsCompras = XLSX.utils.aoa_to_sheet(comprasData);
+            XLSX.utils.book_append_sheet(wb, wsCompras, "Compras");
+
+            // Hoja de ventas (formato OVI)
+            const ventasData = [
+                ['VENTAS - FORMATO OVI'],
+                ['Número de Factura', 'Fecha', 'Cliente', 'Subtotal (Base Imponible)', 'Tasa IVA %', 'IVA Cobrado', 'Total con IVA']
+            ];
+            let totalVentasConIva = 0;
+            ventas.forEach(v => {
+                const totalConIva = v.monto + v.iva;
+                totalVentasConIva += totalConIva;
+                ventasData.push([v.numFactura, v.fecha, v.cliente, v.monto.toFixed(2), v.tasa, v.iva.toFixed(2), totalConIva.toFixed(2)]);
+            });
+            ventasData.push(['TOTAL', '', '', ventas.reduce((s, v) => s + v.monto, 0).toFixed(2), '', ventas.reduce((s, v) => s + v.iva, 0).toFixed(2), totalVentasConIva.toFixed(2)]);
+            const wsVentas = XLSX.utils.aoa_to_sheet(ventasData);
+            XLSX.utils.book_append_sheet(wb, wsVentas, "Ventas");
+
+            const nombreArchivo = `Control_IVA_OVI_${document.getElementById('nombreCliente').value || 'Cliente'}_${document.getElementById('mesDeclaracion').value}.xlsx`;
+            XLSX.writeFile(wb, nombreArchivo);
+        }
+
+        function imprimirDeclaracion() {
+            window.print();
+        }
+
+        document.getElementById('mesDeclaracion').addEventListener('change', actualizarPeriodo);
+    </script>
+</body>
+</html>
